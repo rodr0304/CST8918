@@ -122,33 +122,144 @@ It will be helpful to define a few variables that can be used consistently in th
 - region
 - admin_username
 
+```tf
+# Define config variables
+variable "labelPrefix" {
+  type        = string
+  description = "Your college username. This will form the beginning of various resource names."
+}
+
+variable "region" {
+  default = "westus3"
+}
+
+variable "admin_username" {
+  type        = string
+  default     = "azureadmin"
+  description = "The username for the local user account on the VM."
+}
+
+
+```
 
 #### 4.2 Resource Group
 Define a resource group to logically contain all of the resources for this project. The name argument should be `"${var.labelPrefix}-A05-RG"`
 
+```tf
+# Define the resource group
+resource "azurerm_resource_group" "rg" {
+  name     = "${var.labelPrefix}-A05-RG"
+  location = var.region
+}
+
+```
 
 #### 4.3 Public IP Address
 From the architecture diagram, the first peer resource in the resource group is the public IP address.
 
+```tf
+# Define a public IP address
+resource "azurerm_public_ip" "webserver" {
+  name                = "${var.labelPrefix}A05PublicIP"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Dynamic"
+}
+
+```
 
 #### 4.4 Virtual Network
 Next you will need an Azure virtual network (VNet) with a CIDR range of `10.0.0.0/16`.
-
+```tf
+# Define the virtual network
+resource "azurerm_virtual_network" "vnet" {
+  name                = "${var.labelPrefix}A05Vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+```
 
 #### 4.5 Subnet
 Within the VNet, you will need to define a subnet with the CIDR range of `10.0.1.0/24`.
+```tf
+# Define the subnet
+resource "azurerm_subnet" "webserver" {
+  name                 = "${var.labelPrefix}A05Subnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
 
+```
 
 #### 4.6 Security Group
 The solution architecture design requires both SSH and HTTP access to the web server VM. The AzureRM provider allows for either defining security group rules as separate resources, or inlining them in the definition of the security group resource. Since we only have two rules to add, the inline approach will be preferable.
+```tf
+# Define network security group and rules
+resource "azurerm_network_security_group" "webserver" {
+  name                = "${var.labelPrefix}A05SG"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "HTTP"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+```
 
 #### 4.7 Virtual Network Interface Card (NIC)
 The virtual machine will need a NIC that is connected to the public IP address.
 
+```tf
+# Define the network interface
+resource "azurerm_network_interface" "webserver" {
+  name                = "${var.labelPrefix}A05Nic"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "${var.labelPrefix}A05NicConfig"
+    subnet_id                     = azurerm_subnet.webserver.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.webserver.id
+  }
+}
+
+```
 
 #### 4.8 Apply the security group
 You could apply the security group rules to the whole subnet, or just to the web server. Since the rules that we defined are specific to the web server and may not be appropriate for other VMs that we put in the subnet, let's choose the second option.
 
+```tf
+# Link the security group to the NIC
+resource "azurerm_network_interface_security_group_association" "webserver" {
+  network_interface_id      = azurerm_network_interface.webserver.id
+  network_security_group_id = azurerm_network_security_group.webserver.id
+}
+
+```
 
 #### 4.9 Init Script
 When the virtual machine is deployed, it will be a base Ubuntu server image. You will need to install the web server application on it. We will use apache for this. The **cloudinit** provider will let you define a shell script to run on the VM after the first boot. 
@@ -164,15 +275,76 @@ sudo apt-get install -y apache2
 
 Now define a **data** resource using the `cloudinit_config` resource type.  You will use this resource when defining the VM in the next step.
 
+```tf
+# Define the init script template
+data "cloudinit_config" "init" {
+  gzip          = false
+  base64_encode = true
+
+  part {
+    filename     = "init.sh"
+    content_type = "text/x-shellscript"
+
+    content = file("${path.module}/init.sh")
+  }
+}
+
+```
 
 #### 4.10 Virtual Machine
 You have all of the dependency resources defined and you can now define the web server virtual machine. Don't forget to include your SSH public key in the definition. Since this is a test deployment and not yet production, you should use a cheaper **B1s** sized VM.
 
+```tf
+# Define the virtual machine
+resource "azurerm_linux_virtual_machine" "webserver" {
+  name                  = "${var.labelPrefix}A05VM"
+  resource_group_name   = azurerm_resource_group.rg.name
+  location              = azurerm_resource_group.rg.location
+  network_interface_ids = [azurerm_network_interface.webserver.id]
+  size                  = "Standard_B1s"
+
+  os_disk {
+    name                 = "${var.labelPrefix}A05OSDisk"
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
+    version   = "latest"
+  }
+
+  computer_name                   = "${var.labelPrefix}A05VM"
+  admin_username                  = var.admin_username
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file("~/.ssh/id_rsa.pub")
+  }
+
+  custom_data = data.cloudinit_config.init.rendered
+}
+
+```
 #### Output Values
 The resource definitions are now complete, but it would be nice to know how to validate the deployment. You will want to output a few essential values from the deployment:
 - resource group name
 - public IP address
 
+```tf
+# Define output values for later reference
+output "resource_group_name" {
+  value = azurerm_resource_group.rg.name
+}
+
+output "public_ip" {
+  value = azurerm_linux_virtual_machine.webserver.public_ip_address
+}
+
+```
 
 ### 5. Deploy and Verify
 #### 5.1 Deploy
