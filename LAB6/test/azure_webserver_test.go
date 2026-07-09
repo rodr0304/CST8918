@@ -33,4 +33,34 @@ func TestAzureLinuxVMCreation(t *testing.T) {
 
 	// Confirm VM exists
 	assert.True(t, azure.VirtualMachineExists(t, vmName, resourceGroupName, subscriptionID))
+
+	// Confirm NIC exists
+	nicName := terraform.Output(t, terraformOptions, "nic_name")
+
+	assert.True(
+		t,
+		azure.NetworkInterfaceExists(
+			t,
+			nicName,
+			resourceGroupName,
+			subscriptionID,
+		),
+	)
+
+	// Confirm VM is running the correct Ubuntu version
+	vm := azure.GetVirtualMachine(t, vmName, resourceGroupName, subscriptionID)
+
+	assert.Equal(t, "Canonical", *vm.StorageProfile.ImageReference.Publisher)
+	assert.Equal(t, "0001-com-ubuntu-server-jammy", *vm.StorageProfile.ImageReference.Offer)
+	assert.Equal(t, "22_04-lts-gen2", *vm.StorageProfile.ImageReference.Sku)
+
+	// Confirm NIC is connected to VM
+	vmNics := azure.GetVirtualMachineNics(
+		t,
+		vmName,
+		resourceGroupName,
+		subscriptionID,
+	)
+
+	assert.Contains(t, vmNics, nicName)
 }
