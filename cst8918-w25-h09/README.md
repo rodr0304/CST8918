@@ -115,6 +115,40 @@ The deployed application includes:
 
 ---
 
+## Screenshots
+
+### PORTAL
+
+![AKS Cluster](screenshots/Screenshot%202026-07-12%20at%2009.57.01.png)
+
+---
+
+### CART
+
+![Pods](screenshots/Screenshot%202026-07-12%20at%2009.57.18.png)
+
+---
+
+### Products
+
+![Services](screenshots/Screenshot%202026-07-12%20at%2009.57.26.png)
+
+---
+
+### Application Running
+
+![Application](screenshots/Screenshot%202026-07-12%20at%2009.58.02.png)
+
+---
+
+### Application Running
+
+![Shopping Cart](screenshots/Screenshot%202026-07-12%20at%2010.05.21.png)
+
+---
+
+---
+
 ## Cleanup
 
 To avoid Azure charges, destroy the infrastructure after completing the lab:
