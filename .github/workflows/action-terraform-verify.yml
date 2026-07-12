@@ -81,7 +81,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: infrastructure
+        working-directory: Lab-A09/infrastructure
 
     steps:
       - uses: actions/checkout@v4
