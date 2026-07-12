@@ -1,7 +1,6 @@
 # CST8918 - Hybrid H09 - Azure Kubernetes Service (AKS) with Terraform
 ---
-[![YouTube](https://img.shields.io/badge/YouTube-Watch%20Video-red?logo=youtube)](https://www.youtube.com/watch?v=SEU_VIDEO_ID)
----
+
 ## Overview
 
 This project demonstrates how to provision an Azure Kubernetes Service (AKS) cluster using Terraform and deploy a sample multi-tier application using Kubernetes.
