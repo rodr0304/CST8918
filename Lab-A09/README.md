@@ -1,16 +1,16 @@
 # CST8918 - Hybrid A09
-## Terraform Validation with Husky and GitHub Actions
+## Husky + GitHub Actions for Terraform Validation
 
-**Student:** Diniz Martins  
-**Course:** CST8918 – DevOps: Infrastructure as Code  
+### Student
+**Diniz Martins**
 
 ---
 
 # Objective
 
-The objective of this assignment was to create a basic CI/CD pipeline for a Terraform project using GitHub Actions and Husky.
+The purpose of this assignment was to create a CI/CD pipeline for a Terraform Infrastructure as Code (IaC) project using **GitHub Actions** and **Husky**.
 
-The solution validates Terraform code before commits and during Pull Requests to ensure formatting, syntax validation, and static analysis.
+The project validates Terraform code before commits and during Pull Requests.
 
 ---
 
@@ -40,137 +40,130 @@ Lab-A09/
 
 ---
 
-# Terraform Resource
+# Technologies Used
 
-A simple Azure Resource Group was created to validate the Terraform configuration.
-
-The project includes:
-
-- Resource Group
-- Variables
-- Outputs
-- AzureRM Provider
+- Terraform
+- Azure
+- GitHub Actions
+- Husky
+- TFLint
+- Git
 
 ---
 
-# Husky Pre-Commit Hook
+# Part 1 - Husky Pre-Commit Hook
 
-The pre-commit hook performs the following validations before allowing a commit:
+The Husky pre-commit hook was configured to execute:
 
-- Terraform Format Check
-
-```bash
-terraform fmt -check -recursive
-```
-
-- Terraform Initialization
-
-```bash
-terraform init -backend=false
-```
-
-- Terraform Validation
-
-```bash
-terraform validate
-```
-
+- Terraform Format Check (`terraform fmt`)
+- Terraform Validation (`terraform validate`)
 - TFLint
 
-```bash
-tflint --init
-tflint
-```
-
-If any validation fails, the commit is blocked.
+This prevents incorrectly formatted Terraform code from being committed.
 
 ---
 
-# GitHub Actions Workflow
+# Part 2 - GitHub Actions Workflow
 
-A GitHub Actions workflow was created to automatically validate every Pull Request.
-
-The workflow executes three independent jobs:
+A GitHub Actions workflow was created to automatically execute:
 
 - Terraform Format Check
 - Terraform Validate
 - TFLint
 
-The workflow only runs on Pull Requests targeting:
-
-- main
-- master
+whenever a Pull Request is opened against the **main** branch.
 
 ---
 
-# Testing Performed
+# Testing the Workflow
 
-The following tests were completed successfully:
+The assignment required intentionally breaking the Terraform code to verify that the pipeline correctly detects formatting problems.
 
-## Husky
+## Step 1 – Create a Pull Request
 
-✔ Introduced formatting errors in the Terraform code.
+A Pull Request was created to test the GitHub Actions workflow.
 
-✔ Verified that Husky blocked the commit.
-
-✔ Corrected the formatting.
-
-✔ Successfully committed after fixing the errors.
+![Pull Request](Screenshots/SS1%20-%20OK.png)
 
 ---
 
-## GitHub Actions
+## Step 2 – Initial Pipeline Failure
 
-✔ Created a Pull Request.
+The workflow initially failed because Terraform formatting was intentionally broken.
 
-✔ Pushed intentionally invalid Terraform formatting.
+This confirms that the GitHub Actions workflow correctly detected formatting issues.
 
-✔ Confirmed that GitHub Actions failed.
-
-✔ Corrected the formatting.
-
-✔ Pushed the changes again.
-
-✔ Verified that all GitHub Actions checks passed.
+![Pipeline Failed](Screenshots/SS5%20-%20NOK.png)
 
 ---
 
-# Challenges Encountered
+## Step 3 – TFLint Failure
 
-Several issues were encountered during development:
+During testing, another issue was discovered.
 
-- Incorrect GitHub Actions working directory.
-- Duplicate workflow files created during development.
-- Husky path configuration needed to be adjusted.
-- Terraform files were initially committed in the wrong location.
-- GitHub Actions initially searched for the `infrastructure` folder in the repository root instead of `Lab-A09/infrastructure`.
-- Multiple rounds of testing were required before all workflow jobs passed successfully.
+The TFLint job was configured to execute inside an incorrect working directory.
 
-Each issue was resolved by reviewing the project structure, updating workflow paths, and validating the configuration locally before pushing changes.
+GitHub Actions returned the following error.
+
+![TFLint Failure](Screenshots/SS4%20-%20NOK.png)
 
 ---
 
-# Technologies Used
+## Step 4 – Investigating the Error
 
-- Terraform
-- AzureRM Provider
-- Git
-- GitHub
+The workflow logs were analyzed to identify the root cause.
+
+The problem was caused by an incorrect Terraform working directory.
+
+After updating the workflow, the TFLint job executed successfully.
+
+![Workflow Logs](Screenshots/SS3%20-%20NOK.png)
+
+---
+
+## Step 5 – Successful Pipeline
+
+After fixing:
+
+- Terraform formatting
+- GitHub Actions workflow
+- Working directory configuration
+
+all GitHub Actions jobs completed successfully.
+
+✔ Terraform Format Check
+
+✔ Terraform Validate
+
+✔ TFLint
+
+![Successful Pipeline](Screenshots/SS2%20-%20OK.png)
+
+---
+
+# Challenges
+
+During this assignment, several practical issues were encountered:
+
+- Configuring Husky with an existing repository.
+- Updating Husky to a compatible version.
+- Correctly configuring Terraform inside a subfolder.
+- Configuring GitHub Actions to execute Terraform commands inside the `Lab-A09/infrastructure` directory.
+- Debugging GitHub Actions logs to identify workflow failures.
+- Fixing the TFLint working directory configuration.
+
+These challenges helped improve understanding of CI/CD pipelines and automated Terraform validation.
+
+---
+
+# Conclusion
+
+The project successfully demonstrates a complete Terraform validation pipeline using:
+
+- Husky Pre-Commit Hooks
 - GitHub Actions
-- Husky
+- Terraform Format Validation
+- Terraform Validation
 - TFLint
-- Visual Studio Code
 
----
-
-# Final Result
-
-The project successfully implements:
-
-- Local Terraform validation using Husky.
-- Automatic Pull Request validation using GitHub Actions.
-- Terraform formatting verification.
-- Terraform syntax validation.
-- Static code analysis with TFLint.
-
-All GitHub Actions checks completed successfully.
+The workflow automatically prevents improperly formatted or invalid Terraform code from being merged into the main branch.
