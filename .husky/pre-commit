@@ -1,15 +1,16 @@
 #!/usr/bin/env sh
+set -e
 
 echo "Running terraform fmt..."
-terraform -chdir=infrastructure fmt -check -recursive
+terraform -chdir=Lab-A09/infrastructure fmt -check -recursive
 
 echo "Initializing terraform..."
-terraform -chdir=infrastructure init -backend=false -input=false
+terraform -chdir=Lab-A09/infrastructure init -backend=false -input=false
 
 echo "Running terraform validate..."
-terraform -chdir=infrastructure validate
+terraform -chdir=Lab-A09/infrastructure validate
 
 echo "Running tflint..."
-cd infrastructure
+cd Lab-A09/infrastructure
 tflint --init
 tflint
